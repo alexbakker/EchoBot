@@ -206,12 +206,12 @@ void video_receive_frame(ToxAV *toxAV, uint32_t friend_number, uint16_t width, u
 	}
 
 	uint8_t *y_dest = (uint8_t*)malloc(width * height);
-  uint8_t *u_dest = (uint8_t*)malloc(width * height / 2);
-  uint8_t *v_dest = (uint8_t*)malloc(width * height / 2);
+	uint8_t *u_dest = (uint8_t*)malloc(width * height / 2);
+	uint8_t *v_dest = (uint8_t*)malloc(width * height / 2);
 
-  for (size_t h = 0; h < height; h++) {
+	for (size_t h = 0; h < height; h++) {
 		memcpy(&y_dest[h * width], &y[h * ystride], width);
-  }
+	}
 
 	for (size_t h = 0; h < height / 2; h++) {
 		memcpy(&u_dest[h * width / 2], &u[h * ustride], width / 2);

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -g
+CFLAGS = -std=gnu99 -Wall -g
 FILES = src/*.c
 OUT_EXE = bin/echobot
 LIBS = -lpthread -lsodium -ltoxcore -ltoxav

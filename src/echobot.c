@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <tox/tox.h>
 #include <tox/toxav.h>

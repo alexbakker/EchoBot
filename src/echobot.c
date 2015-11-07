@@ -11,6 +11,9 @@
 
 static uint64_t start_time;
 static bool signal_exit = false;
+
+static const int32_t audio_bitrate = 48;
+static const int32_t video_bitrate = 5000;
 static const char *data_filename = "data";
 
 static void *run_toxav(void *arg)
@@ -168,7 +171,7 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 void call(ToxAV *toxAV, uint32_t friend_number, bool audio_enabled, bool video_enabled, void *user_data)
 {
 	TOXAV_ERR_ANSWER err;
-	toxav_answer(toxAV, friend_number, 48, video_enabled ? 5000 : 0, &err);
+	toxav_answer(toxAV, friend_number, audio_enabled ? audio_bitrate : 0, video_enabled ? video_bitrate : 0, &err);
 
 	if (err != TOXAV_ERR_ANSWER_OK) {
 		printf("Could not answer call, friend: %d, error: %d\n", friend_number, err);
@@ -178,10 +181,18 @@ void call(ToxAV *toxAV, uint32_t friend_number, bool audio_enabled, bool video_e
 void call_state(ToxAV *toxAV, uint32_t friend_number, uint32_t state, void *user_data)
 {
 	if (state & TOXAV_FRIEND_CALL_STATE_FINISHED) {
-		printf("Call finished\n");
+		printf("Call with friend %d finished\n", friend_number);
+		return;
 	} else if (state & TOXAV_FRIEND_CALL_STATE_ERROR) {
-		printf("Call errored\n");
+		printf("Call with friend %d errored\n", friend_number);
+		return;
 	}
+
+	bool send_audio = (state & TOXAV_FRIEND_CALL_STATE_SENDING_A) && (state & TOXAV_FRIEND_CALL_STATE_ACCEPTING_A);
+	bool send_video = state & TOXAV_FRIEND_CALL_STATE_SENDING_V && (state & TOXAV_FRIEND_CALL_STATE_ACCEPTING_V);
+	toxav_bit_rate_set(toxAV, friend_number, send_audio ? audio_bitrate : 0, send_video ? video_bitrate : 0, NULL);
+
+	printf("Call state for friend %d changed to %d: audio: %d, video: %d\n", friend_number, state, send_audio, send_video);
 }
 
 void audio_receive_frame(ToxAV *toxAV, uint32_t friend_number, const int16_t *pcm, size_t sample_count, uint8_t channels, uint32_t sampling_rate, void *user_data)
@@ -190,7 +201,7 @@ void audio_receive_frame(ToxAV *toxAV, uint32_t friend_number, const int16_t *pc
 	toxav_audio_send_frame(toxAV, friend_number, pcm, sample_count, channels, sampling_rate, &err);
 
 	if (err != TOXAV_ERR_SEND_FRAME_OK) {
-		printf("Could not send audio frame, friend: %d, error: %d\n", friend_number, err);
+		printf("Could not send audio frame to friend: %d, error: %d\n", friend_number, err);
 	}
 }
 
@@ -226,7 +237,7 @@ void video_receive_frame(ToxAV *toxAV, uint32_t friend_number, uint16_t width, u
 	free(v_dest);
 
 	if (err != TOXAV_ERR_SEND_FRAME_OK) {
-		printf("Could not send video frame, friend: %d, error: %d\n", friend_number, err);
+		printf("Could not send video frame to friend: %d, error: %d\n", friend_number, err);
 	}
 }
 

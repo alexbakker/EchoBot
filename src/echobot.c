@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
 	printf("%s\n", address_hex);
 
 	const char *name = "EchoBot";
-	const char *status_msg = "Tox audio testing service. Note: I'm on the new ToxAV API!";
+	const char *status_msg = "Tox audio/video testing service. Note: I'm on the new ToxAV API!";
 
 	tox_self_set_name(tox, (uint8_t *)name, strlen(name), NULL);
 	tox_self_set_status_message(tox, (uint8_t *)status_msg, strlen(status_msg), NULL);

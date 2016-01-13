@@ -168,6 +168,18 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 	}
 }
 
+void file_recv(Tox *tox, uint32_t friend_number, uint32_t file_number, uint32_t kind, uint64_t file_size, const uint8_t *filename, size_t filename_length, void *user_data)
+{
+	if (kind == TOX_FILE_KIND_AVATAR) {
+		return;
+	}
+	
+	tox_file_control(tox, friend_number, file_number, TOX_FILE_CONTROL_CANCEL, NULL);
+	
+	const char *msg = "Sorry, I don't support file transfers.";
+	tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t*)msg, strlen(msg), NULL);
+}
+
 void call(ToxAV *toxAV, uint32_t friend_number, bool audio_enabled, bool video_enabled, void *user_data)
 {
 	TOXAV_ERR_ANSWER err;
@@ -273,6 +285,7 @@ int main(int argc, char *argv[])
 	tox_callback_self_connection_status(tox, self_connection_status, NULL);
 	tox_callback_friend_request(tox, friend_request, NULL);
 	tox_callback_friend_message(tox, friend_message, NULL);
+	tox_callback_file_recv(tox, file_recv, NULL);
 
 	if (err != TOX_ERR_NEW_OK) {
 		printf("Error at tox_new, error: %d\n", err);

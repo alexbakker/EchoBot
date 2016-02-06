@@ -16,6 +16,9 @@ static const int32_t audio_bitrate = 48;
 static const int32_t video_bitrate = 5000;
 static const char *data_filename = "data";
 
+static Tox *g_tox = NULL;
+static ToxAV *g_toxAV = NULL;
+
 static void *run_toxav(void *arg)
 {
 	ToxAV *toxav = (ToxAV *)arg;
@@ -165,6 +168,8 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 
 		const char *info_msg = "If you're experiencing issues, contact Impyy in #tox at freenode";
 		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)info_msg, strlen(info_msg), NULL);
+	} else if (strcmp("!callme", dest_msg) == 0) {
+		toxav_call(g_toxAV, friend_number, audio_bitrate, video_bitrate, NULL);
 	}
 }
 
@@ -173,9 +178,9 @@ void file_recv(Tox *tox, uint32_t friend_number, uint32_t file_number, uint32_t 
 	if (kind == TOX_FILE_KIND_AVATAR) {
 		return;
 	}
-	
+
 	tox_file_control(tox, friend_number, file_number, TOX_FILE_CONTROL_CANCEL, NULL);
-	
+
 	const char *msg = "Sorry, I don't support file transfers.";
 	tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t*)msg, strlen(msg), NULL);
 }
@@ -263,13 +268,12 @@ int main(int argc, char *argv[])
 	signal(SIGINT, handle_signal);
 	start_time = time(NULL);
 
-	Tox *tox;
 	TOX_ERR_NEW err;
 	struct Tox_Options options;
 	tox_options_default(&options);
 
 	if (file_exists(data_filename)) {
-		if (load_profile(&tox, &options)) {
+		if (load_profile(&g_tox, &options)) {
 			printf("Loaded data from disk\n");
 		} else {
 			printf("Failed to load data from disk\n");
@@ -278,14 +282,14 @@ int main(int argc, char *argv[])
 	} else {
 		printf("Creating a new profile\n");
 
-		tox = tox_new(&options, &err);
-		save_profile(tox);
+		g_tox = tox_new(&options, &err);
+		save_profile(g_tox);
 	}
 
-	tox_callback_self_connection_status(tox, self_connection_status, NULL);
-	tox_callback_friend_request(tox, friend_request, NULL);
-	tox_callback_friend_message(tox, friend_message, NULL);
-	tox_callback_file_recv(tox, file_recv, NULL);
+	tox_callback_self_connection_status(g_tox, self_connection_status, NULL);
+	tox_callback_friend_request(g_tox, friend_request, NULL);
+	tox_callback_friend_message(g_tox, friend_message, NULL);
+	tox_callback_file_recv(g_tox, file_recv, NULL);
 
 	if (err != TOX_ERR_NEW_OK) {
 		printf("Error at tox_new, error: %d\n", err);
@@ -293,7 +297,7 @@ int main(int argc, char *argv[])
 	}
 
 	uint8_t address_bin[TOX_ADDRESS_SIZE];
-	tox_self_get_address(tox, (uint8_t *)address_bin);
+	tox_self_get_address(g_tox, (uint8_t *)address_bin);
 	char address_hex[TOX_ADDRESS_SIZE * 2 + 1];
 	sodium_bin2hex(address_hex, sizeof(address_hex), address_bin, sizeof(address_bin));
 
@@ -302,26 +306,26 @@ int main(int argc, char *argv[])
 	const char *name = "EchoBot";
 	const char *status_msg = "Tox audio/video testing service. Send '!info' for stats.";
 
-	tox_self_set_name(tox, (uint8_t *)name, strlen(name), NULL);
-	tox_self_set_status_message(tox, (uint8_t *)status_msg, strlen(status_msg), NULL);
+	tox_self_set_name(g_tox, (uint8_t *)name, strlen(name), NULL);
+	tox_self_set_status_message(g_tox, (uint8_t *)status_msg, strlen(status_msg), NULL);
 
 	const char *key_hex = "788236D34978D1D5BD822F0A5BEBD2C53C64CC31CD3149350EE27D4D9A2F9B6B";
 	uint8_t key_bin[TOX_PUBLIC_KEY_SIZE];
 	sodium_hex2bin(key_bin, sizeof(key_bin), key_hex, strlen(key_hex), NULL, NULL, NULL);
 
 	TOX_ERR_BOOTSTRAP err3;
-	tox_bootstrap(tox, "node.impy.me", 33445, key_bin, &err3);
+	tox_bootstrap(g_tox, "node.impy.me", 33445, key_bin, &err3);
 	if (err3 != TOX_ERR_BOOTSTRAP_OK) {
 		printf("Could not bootstrap, error: %d\n", err3);
 		return -1;
 	}
 
 	TOXAV_ERR_NEW err2;
-	ToxAV *toxAV = toxav_new(tox, &err2);
-	toxav_callback_call(toxAV, call, NULL);
-	toxav_callback_call_state(toxAV, call_state, NULL);
-	toxav_callback_audio_receive_frame(toxAV, audio_receive_frame, NULL);
-	toxav_callback_video_receive_frame(toxAV, video_receive_frame, NULL);
+	g_toxAV = toxav_new(g_tox, &err2);
+	toxav_callback_call(g_toxAV, call, NULL);
+	toxav_callback_call_state(g_toxAV, call_state, NULL);
+	toxav_callback_audio_receive_frame(g_toxAV, audio_receive_frame, NULL);
+	toxav_callback_video_receive_frame(g_toxAV, video_receive_frame, NULL);
 
 	if (err2 != TOXAV_ERR_NEW_OK) {
 		printf("Error at toxav_new: %d\n", err);
@@ -329,8 +333,8 @@ int main(int argc, char *argv[])
 	}
 
 	pthread_t tox_thread, toxav_thread;
-	pthread_create(&tox_thread, NULL, &run_tox, tox);
-	pthread_create(&toxav_thread, NULL, &run_toxav, toxAV);
+	pthread_create(&tox_thread, NULL, &run_tox, g_tox);
+	pthread_create(&toxav_thread, NULL, &run_toxav, g_toxAV);
 
 	while(!signal_exit) {
 		nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
@@ -341,9 +345,9 @@ int main(int argc, char *argv[])
 	pthread_cancel(tox_thread);
 	pthread_cancel(toxav_thread);
 
-	save_profile(tox);
-	toxav_kill(toxAV);
-	tox_kill(tox);
+	save_profile(g_tox);
+	toxav_kill(g_toxAV);
+	tox_kill(g_tox);
 
 	return 0;
 }

@@ -169,7 +169,7 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 		const char *info_msg = "If you're experiencing issues, contact Impyy in #tox at freenode";
 		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)info_msg, strlen(info_msg), NULL);
 	} else if (strcmp("!callme", dest_msg) == 0) {
-		toxav_call(g_toxAV, friend_number, audio_bitrate, video_bitrate, NULL);
+		toxav_call(g_toxAV, friend_number, audio_bitrate, 0, NULL);
 	}
 }
 

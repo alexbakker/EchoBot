@@ -9,6 +9,7 @@
 #include <tox/toxav.h>
 #include <sodium.h>
 
+static uint64_t last_purge;
 static uint64_t start_time;
 static bool signal_exit = false;
 
@@ -18,6 +19,51 @@ static const char *data_filename = "data";
 
 static Tox *g_tox = NULL;
 static ToxAV *g_toxAV = NULL;
+
+void friend_cleanup(Tox *tox)
+{
+	uint32_t friend_count = tox_self_get_friend_list_size(tox);
+	if (friend_count == 0) {
+		return;
+	}
+
+	uint32_t friends[friend_count];
+	tox_self_get_friend_list(tox, friends);
+
+	uint64_t curr_time = time(NULL);
+	for (uint32_t i = 0; i < friend_count; i++) {
+		TOX_ERR_FRIEND_GET_LAST_ONLINE err;
+		uint64_t last_online = tox_friend_get_last_online(tox, i, &err);
+
+		if (err != TOX_ERR_FRIEND_GET_LAST_ONLINE_OK) {
+			printf("couldn't obtain 'last online', this should never happen\n");
+			continue;
+		}
+
+		if (curr_time - last_online > 2629743) {
+			printf("removing friend %d\n", i);
+			tox_friend_delete(tox, i, NULL);
+		}
+	}
+}
+
+bool save_profile(Tox *tox)
+{
+	uint32_t save_size = tox_get_savedata_size(tox);
+	uint8_t save_data[save_size];
+
+	tox_get_savedata(tox, save_data);
+
+	FILE *file = fopen(data_filename, "wb");
+	if (file) {
+		fwrite(save_data, sizeof(uint8_t), save_size, file);
+		fclose(file);
+		return true;
+	} else {
+		printf("Could not write data to disk\n");
+		return false;
+	}
+}
 
 static void *run_toxav(void *arg)
 {
@@ -39,6 +85,14 @@ static void *run_tox(void *arg)
 
 	for (;;) {
 		tox_iterate(tox);
+
+		uint64_t curr_time = time(NULL);
+		if (curr_time - last_purge > 1800) {
+			friend_cleanup(tox);
+			save_profile(tox);
+
+			last_purge = curr_time;
+		}
 
 		long long time = tox_iteration_interval(tox) * 1000000L;
 		nanosleep((const struct timespec[]){{0, time}}, NULL);
@@ -87,24 +141,6 @@ bool load_profile(Tox **tox, struct Tox_Options *options)
 	}
 
 	return false;
-}
-
-bool save_profile(Tox *tox)
-{
-	uint32_t save_size = tox_get_savedata_size(tox);
-	uint8_t save_data[save_size];
-
-	tox_get_savedata(tox, save_data);
-
-	FILE *file = fopen(data_filename, "wb");
-	if (file) {
-		fwrite(save_data, sizeof(uint8_t), save_size, file);
-		fclose(file);
-		return true;
-	} else {
-		printf("Could not write data to disk\n");
-		return false;
-	}
 }
 
 uint32_t get_online_friend_count(Tox *tox)
@@ -165,6 +201,9 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 		char friend_msg[100];
 		snprintf(friend_msg, sizeof(friend_msg), "Friends: %zu (%d online)", tox_self_get_friend_list_size(tox), get_online_friend_count(tox));
 		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)friend_msg, strlen(friend_msg), NULL);
+
+		const char *friend_info_msg = "Friends are removed after 1 month of inactivity";
+		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)friend_info_msg, strlen(friend_info_msg), NULL);
 
 		const char *info_msg = "If you're experiencing issues, contact Impyy in #tox at freenode";
 		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)info_msg, strlen(info_msg), NULL);
@@ -229,7 +268,7 @@ void video_receive_frame(ToxAV *toxAV, uint32_t friend_number, uint16_t width, u
 	vstride = abs(vstride);
 
 	if (ystride < width || ustride < width / 2 || vstride < width / 2) {
-		printf("wtf");
+		printf("wtf\n");
 		return;
 	}
 
@@ -336,7 +375,7 @@ int main(int argc, char *argv[])
 	pthread_create(&tox_thread, NULL, &run_tox, g_tox);
 	pthread_create(&toxav_thread, NULL, &run_toxav, g_toxAV);
 
-	while(!signal_exit) {
+	while (!signal_exit) {
 		nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
 	}
 

@@ -307,7 +307,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT, handle_signal);
 	start_time = time(NULL);
 
-	TOX_ERR_NEW err;
+	TOX_ERR_NEW err = TOX_ERR_NEW_OK;
 	struct Tox_Options options;
 	tox_options_default(&options);
 

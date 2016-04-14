@@ -33,7 +33,7 @@ void friend_cleanup(Tox *tox)
 	uint64_t curr_time = time(NULL);
 	for (uint32_t i = 0; i < friend_count; i++) {
 		TOX_ERR_FRIEND_GET_LAST_ONLINE err;
-		uint64_t last_online = tox_friend_get_last_online(tox, i, &err);
+		uint64_t last_online = tox_friend_get_last_online(tox, friends[i], &err);
 
 		if (err != TOX_ERR_FRIEND_GET_LAST_ONLINE_OK) {
 			printf("couldn't obtain 'last online', this should never happen\n");

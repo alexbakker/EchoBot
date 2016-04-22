@@ -190,7 +190,7 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 	dest_msg[length] = '\0';
 	memcpy(dest_msg, message, length);
 
-	if (strcmp("!info", dest_msg) == 0) {
+	if (!strcmp("!info", dest_msg)) {
 		char time_msg[TOX_MAX_MESSAGE_LENGTH];
 		char time_str[64];
 		uint64_t cur_time = time(NULL);
@@ -213,11 +213,12 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 	} else if (!strcmp ("!videocallme", dest_msg)) {
 		toxav_call (g_toxAV, friend_number, audio_bitrate, video_bitrate, NULL);
 	} else {
-		char answer[TOX_MAX_MESSAGE_LENGTH];
-		memset ((void*) answer, 0, TOX_MAX_MESSAGE_LENGTH);
-		static const char *proto = "You said: '%s'.\n\n!info: Show stats.\n!callme: Launch an audio call.\n!videocallme: Launch a video call.";
-		snprintf (answer, TOX_MAX_MESSAGE_LENGTH, proto, message);
-		tox_friend_send_message (tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t*) answer, strlen (answer), NULL);
+		/* Just repeat what has been said like the nymph Echo. */
+		tox_friend_send_message (tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, message, length, NULL);
+		
+		/* Send usage instructions in new message. */
+		static const char *help_msg = "EchoBot commands:\n!info: Show stats.\n!callme: Launch an audio call.\n!videocallme: Launch a video call.";
+		tox_friend_send_message (tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t*) help_msg, strlen (help_msg), NULL);
 	}
 }
 

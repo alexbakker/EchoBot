@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
 	sodium_hex2bin(key_bin, sizeof(key_bin), key_hex, strlen(key_hex), NULL, NULL, NULL);
 
 	TOX_ERR_BOOTSTRAP err3;
-	tox_bootstrap(g_tox, "node.impy.me", 33445, key_bin, &err3);
+	tox_bootstrap(g_tox, "nodes.tox.chat", 33445, key_bin, &err3);
 	if (err3 != TOX_ERR_BOOTSTRAP_OK) {
 		printf("Could not bootstrap, error: %d\n", err3);
 		return -1;

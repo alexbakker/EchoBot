@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
 	tox_self_set_name(g_tox, (uint8_t *)name, strlen(name), NULL);
 	tox_self_set_status_message(g_tox, (uint8_t *)status_msg, strlen(status_msg), NULL);
 
-	const char *key_hex = "788236D34978D1D5BD822F0A5BEBD2C53C64CC31CD3149350EE27D4D9A2F9B6B";
+	const char *key_hex = "6FC41E2BD381D37E9748FC0E0328CE086AF9598BECC8FEB7DDF2E440475F300E";
 	uint8_t key_bin[TOX_PUBLIC_KEY_SIZE];
 	sodium_hex2bin(key_bin, sizeof(key_bin), key_hex, strlen(key_hex), NULL, NULL, NULL);
 

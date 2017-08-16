@@ -85,7 +85,7 @@ static void *run_tox(void *arg)
 	Tox *tox = (Tox *)arg;
 
 	for (;;) {
-		tox_iterate(tox);
+		tox_iterate(tox, NULL);
 
 		uint64_t curr_time = time(NULL);
 		if (curr_time - last_purge > 1800) {
@@ -102,7 +102,7 @@ static void *run_tox(void *arg)
 	return NULL;
 }
 
-/* ssssshhh I stole this from ToxBot, don't tell anyone.. */
+/* taken from ToxBot */
 static void get_elapsed_time_str(char *buf, int bufsize, uint64_t secs)
 {
 	long unsigned int minutes = (secs % 3600) / 60;
@@ -215,7 +215,7 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 	} else {
 		/* Just repeat what has been said like the nymph Echo. */
 		tox_friend_send_message (tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, message, length, NULL);
-		
+
 		/* Send usage instructions in new message. */
 		static const char *help_msg = "EchoBot commands:\n!info: Show stats.\n!callme: Launch an audio call.\n!videocallme: Launch a video call.";
 		tox_friend_send_message (tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t*) help_msg, strlen (help_msg), NULL);
@@ -335,10 +335,10 @@ int main(int argc, char *argv[])
 		save_profile(g_tox);
 	}
 
-	tox_callback_self_connection_status(g_tox, self_connection_status, NULL);
-	tox_callback_friend_request(g_tox, friend_request, NULL);
-	tox_callback_friend_message(g_tox, friend_message, NULL);
-	tox_callback_file_recv(g_tox, file_recv, NULL);
+	tox_callback_self_connection_status(g_tox, self_connection_status);
+	tox_callback_friend_request(g_tox, friend_request);
+	tox_callback_friend_message(g_tox, friend_message);
+	tox_callback_file_recv(g_tox, file_recv);
 
 	if (err != TOX_ERR_NEW_OK) {
 		printf("Error at tox_new, error: %d\n", err);

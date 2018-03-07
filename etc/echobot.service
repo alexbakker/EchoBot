@@ -1,0 +1,14 @@
+[Unit]
+Description=Echobot
+After=network.target
+
+[Service]
+WorkingDirectory=/var/lib/echobot
+ExecStart=/usr/local/bin/echobot
+User=echobot
+Group=echobot
+UMask=077
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

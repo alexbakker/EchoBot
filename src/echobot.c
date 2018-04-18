@@ -259,7 +259,8 @@ void call_state(ToxAV *toxAV, uint32_t friend_number, uint32_t state, void *user
 
 	bool send_audio = (state & TOXAV_FRIEND_CALL_STATE_SENDING_A) && (state & TOXAV_FRIEND_CALL_STATE_ACCEPTING_A);
 	bool send_video = state & TOXAV_FRIEND_CALL_STATE_SENDING_V && (state & TOXAV_FRIEND_CALL_STATE_ACCEPTING_V);
-	toxav_bit_rate_set(toxAV, friend_number, send_audio ? audio_bitrate : 0, send_video ? video_bitrate : 0, NULL);
+	toxav_audio_set_bit_rate(toxAV, friend_number, send_audio ? audio_bitrate : 0, NULL);
+	toxav_video_set_bit_rate(toxAV, friend_number, send_video ? video_bitrate : 0, NULL);
 
 	printf("Call state for friend %d changed to %d: audio: %d, video: %d\n", friend_number, state, send_audio, send_video);
 }

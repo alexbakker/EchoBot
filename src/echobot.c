@@ -1,9 +1,10 @@
+#include <inttypes.h>
 #include <pthread.h>
-#include <time.h>
-#include <unistd.h>
 #include <signal.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
+#include <unistd.h>
 
 #include <tox/tox.h>
 #include <tox/toxav.h>
@@ -191,17 +192,19 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 	memcpy(dest_msg, message, length);
 
 	if (!strcmp("!info", dest_msg)) {
-		char time_msg[TOX_MAX_MESSAGE_LENGTH];
+		char res_msg[TOX_MAX_MESSAGE_LENGTH];
 		char time_str[64];
 		uint64_t cur_time = time(NULL);
 
 		get_elapsed_time_str(time_str, sizeof(time_str), cur_time - start_time);
-		snprintf(time_msg, sizeof(time_msg), "Uptime: %s", time_str);
-		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)time_msg, strlen(time_msg), NULL);
+		snprintf(res_msg, sizeof(res_msg), "Uptime: %s", time_str);
+		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)res_msg, strlen(res_msg), NULL);
 
-		char friend_msg[100];
-		snprintf(friend_msg, sizeof(friend_msg), "Friends: %zu (%d online)", tox_self_get_friend_list_size(tox), get_online_friend_count(tox));
-		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)friend_msg, strlen(friend_msg), NULL);
+		snprintf(res_msg, sizeof(res_msg), "Toxcore: %llu.%llu.%llu", (long long unsigned int)tox_version_major, (long long unsigned int)tox_version_minor, (long long unsigned int)tox_version_patch);
+		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)res_msg, strlen(res_msg), NULL);
+
+		snprintf(res_msg, sizeof(res_msg), "Friends: %zu (%d online)", tox_self_get_friend_list_size(tox), get_online_friend_count(tox));
+		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)res_msg, strlen(res_msg), NULL);
 
 		const char *friend_info_msg = "Friends are removed after 1 month of inactivity";
 		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)friend_info_msg, strlen(friend_info_msg), NULL);

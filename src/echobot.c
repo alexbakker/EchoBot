@@ -362,12 +362,12 @@ int main(int argc, char *argv[])
 	tox_self_set_name(g_tox, (uint8_t *)name, strlen(name), NULL);
 	tox_self_set_status_message(g_tox, (uint8_t *)status_msg, strlen(status_msg), NULL);
 
-	const char *key_hex = "F404ABAA1C99A9D37D61AB54898F56793E1DEF8BD46B1038B9D822E8460FAB67";
+	const char *key_hex = "7A6098B590BDC73F9723FC59F82B3F9085A64D1B213AAF8E610FD351930D052D";
 	uint8_t key_bin[TOX_PUBLIC_KEY_SIZE];
 	sodium_hex2bin(key_bin, sizeof(key_bin), key_hex, strlen(key_hex), NULL, NULL, NULL);
 
 	TOX_ERR_BOOTSTRAP err3;
-	tox_bootstrap(g_tox, "node.tox.biribiri.org", 33445, key_bin, &err3);
+	tox_bootstrap(g_tox, "tox2.abilinski.com", 33445, key_bin, &err3);
 	if (err3 != TOX_ERR_BOOTSTRAP_OK) {
 		printf("Could not bootstrap, error: %d\n", err3);
 		return -1;

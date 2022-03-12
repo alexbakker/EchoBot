@@ -72,22 +72,25 @@ static bool save_profile(Tox *tox) {
 
 static void *run_toxav(void *arg) {
 	ToxAV *toxav = (ToxAV *)arg;
+	fprintf(stderr, "Starting toxav thread\n");
 
-	for (;;) {
+	while (!signal_exit) {
 		toxav_iterate(toxav);
 
 		long long time = toxav_iteration_interval(toxav) * 1000000L;
 		nanosleep((const struct timespec[]){{0, time}}, NULL);
 	}
 
+	fprintf(stderr, "Shut down toxav thread\n");
 	return NULL;
 }
 
 static void *run_tox(void *arg) {
 	Tox *tox = (Tox *)arg;
+	fprintf(stderr, "Starting tox thread\n");
 
-	uint64_t last_purge;
-	for (;;) {
+	uint64_t last_purge = 0;
+	while (!signal_exit) {
 		tox_iterate(tox, NULL);
 
 		uint64_t curr_time = time(NULL);
@@ -102,6 +105,7 @@ static void *run_tox(void *arg) {
 		nanosleep((const struct timespec[]){{0, time}}, NULL);
 	}
 
+	fprintf(stderr, "Shut down tox thread\n");
 	return NULL;
 }
 
@@ -218,10 +222,8 @@ static void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE ty
 	} else if (!strcmp ("!videocallme", dest_msg)) {
 		toxav_call (g_toxAV, friend_number, audio_bitrate, video_bitrate, NULL);
 	} else {
-		/* Just repeat what has been said like the nymph Echo. */
 		tox_friend_send_message (tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, message, length, NULL);
 
-		/* Send usage instructions in new message. */
 		static const char *help_msg = "EchoBot commands:\n!info: Show stats.\n!callme: Launch an audio call.\n!videocallme: Launch a video call.";
 		tox_friend_send_message (tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t*) help_msg, strlen (help_msg), NULL);
 	}
@@ -306,12 +308,7 @@ static void video_receive_frame(ToxAV *toxAV, uint32_t friend_number, uint16_t w
 	}
 }
 
-static void handle_signal(int sig) {
-	signal_exit = true;
-}
-
 int main(int argc, char *argv[]) {
-	signal(SIGINT, handle_signal);
 	start_time = time(NULL);
 
 	TOX_ERR_NEW err = TOX_ERR_NEW_OK;
@@ -394,22 +391,27 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
+	sigset_t sig_set;
+	sigemptyset(&sig_set);
+	sigaddset(&sig_set, SIGTERM);
+	sigaddset(&sig_set, SIGINT);
+
 	pthread_t tox_thread, toxav_thread;
+	pthread_sigmask(SIG_BLOCK, &sig_set, NULL);
 	pthread_create(&tox_thread, NULL, &run_tox, g_tox);
 	pthread_create(&toxav_thread, NULL, &run_toxav, g_toxAV);
 
-	while (!signal_exit) {
-		nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
-	}
+	int sig;
+	sigwait(&sig_set, &sig);
+	fprintf(stderr, "Shutdown signal received\n");
+	signal_exit = true;
+	fprintf(stderr, "Waiting for tox and toxav threads to finish\n");
+	pthread_join(tox_thread, NULL);
+	pthread_join(toxav_thread, NULL);
 
-	fprintf(stderr, "Killing tox and saving profile\n");
-
-	pthread_cancel(tox_thread);
-	pthread_cancel(toxav_thread);
-
+	fprintf(stderr, "Saving profile to disk and killing tox/toxav\n");
 	save_profile(g_tox);
 	toxav_kill(g_toxAV);
 	tox_kill(g_tox);
-
 	return 0;
 }

@@ -21,6 +21,12 @@ static const char *data_filename = "data";
 static Tox *g_tox = NULL;
 static ToxAV *g_toxAV = NULL;
 
+struct tox_node {
+	const char *key;
+	const char *hostname;
+	uint16_t port;
+};
+
 void friend_cleanup(Tox *tox)
 {
 	uint32_t friend_count = tox_self_get_friend_list_size(tox);
@@ -101,6 +107,16 @@ static void *run_tox(void *arg)
 	}
 
 	return NULL;
+}
+
+static TOX_ERR_BOOTSTRAP bootstrap(Tox *tox, struct tox_node *node)
+{
+	uint8_t key[TOX_PUBLIC_KEY_SIZE];
+	sodium_hex2bin(key, sizeof(key), node->key, strlen(node->key), NULL, NULL, NULL);
+
+	TOX_ERR_BOOTSTRAP err;
+	tox_bootstrap(tox, node->hostname, node->port, key, &err);
+	return err;
 }
 
 /* taken from ToxBot */
@@ -362,14 +378,30 @@ int main(int argc, char *argv[])
 	tox_self_set_name(g_tox, (uint8_t *)name, strlen(name), NULL);
 	tox_self_set_status_message(g_tox, (uint8_t *)status_msg, strlen(status_msg), NULL);
 
-	const char *key_hex = "7A6098B590BDC73F9723FC59F82B3F9085A64D1B213AAF8E610FD351930D052D";
-	uint8_t key_bin[TOX_PUBLIC_KEY_SIZE];
-	sodium_hex2bin(key_bin, sizeof(key_bin), key_hex, strlen(key_hex), NULL, NULL, NULL);
+	struct tox_node nodes[] = {
+		{"7A6098B590BDC73F9723FC59F82B3F9085A64D1B213AAF8E610FD351930D052D", "tox2.abilinski.com", 33445},
+		{"3F0A45A268367C1BEA652F258C85F4A66DA76BCAA667A49E770BCC4917AB6A25", "tox.initramfs.io", 33445},
+		{"DA4E4ED4B697F2E9B000EEFE3A34B554ACD3F45F5C96EAEA2516DD7FF9AF7B43", "85.143.221.42", 33445},
+		{"1C5293AEF2114717547B39DA8EA6F1E331E5E358B35F9B6B5F19317911C5F976", "tox.verdict.gg", 33445},
+		{"BEF0CFB37AF874BD17B9A8F9FE64C75521DB95A37D33C5BDB00E9CF58659C04F", "198.199.98.108", 33445},
+		{"82EF82BA33445A1F91A7DB27189ECFC0C013E06E3DA71F588ED692BED625EC23", "tox.kurnevsky.net", 33445},
+		{"B3E5FA80DC8EBD1149AD2AB35ED8B85BD546DEDE261CA593234C619249419506", "tox1.mf-net.eu", 33445}
+	};
 
-	TOX_ERR_BOOTSTRAP err3;
-	tox_bootstrap(g_tox, "tox2.abilinski.com", 33445, key_bin, &err3);
-	if (err3 != TOX_ERR_BOOTSTRAP_OK) {
-		printf("Could not bootstrap, error: %d\n", err3);
+	bool bootstrap_success = false;
+	for (size_t i = 0; i < sizeof(nodes) / sizeof(struct tox_node); i++) {
+		struct tox_node *node = &nodes[i];
+		printf("Bootstrapping from node: %s\n", node->hostname);
+
+		TOX_ERR_BOOTSTRAP err = bootstrap(g_tox, node);
+		if (err != TOX_ERR_BOOTSTRAP_OK) {
+			printf("Could not bootstrap from %s: %d\n", node->hostname, err);
+		} else {
+			bootstrap_success = true;
+		}
+	}
+	if (!bootstrap_success) {
+		printf("Could not bootstrap from any nodes");
 		return -1;
 	}
 

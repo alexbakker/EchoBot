@@ -209,7 +209,7 @@ void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE type, con
 		const char *friend_info_msg = "Friends are removed after 1 month of inactivity";
 		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)friend_info_msg, strlen(friend_info_msg), NULL);
 
-		const char *info_msg = "If you're experiencing issues, contact Impyy in #tox at freenode";
+		const char *info_msg = "If you're experiencing issues, contact alexbakker in #tox at Libera Chat";
 		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)info_msg, strlen(info_msg), NULL);
 	} else if (!strcmp("!callme", dest_msg)) {
 		toxav_call(g_toxAV, friend_number, audio_bitrate, 0, NULL);

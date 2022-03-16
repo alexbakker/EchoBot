@@ -209,6 +209,9 @@ static void friend_message(Tox *tox, uint32_t friend_number, TOX_MESSAGE_TYPE ty
 		snprintf(res_msg, sizeof(res_msg), "Toxcore: %llu.%llu.%llu", (long long unsigned int)tox_version_major(), (long long unsigned int)tox_version_minor(), (long long unsigned int)tox_version_patch());
 		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)res_msg, strlen(res_msg), NULL);
 
+		const char *github_msg = "Source: https://github.com/alexbakker/EchoBot";
+		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)github_msg, strlen(github_msg), NULL);
+
 		snprintf(res_msg, sizeof(res_msg), "Friends: %zu (%d online)", tox_self_get_friend_list_size(tox), get_online_friend_count(tox));
 		tox_friend_send_message(tox, friend_number, TOX_MESSAGE_TYPE_NORMAL, (uint8_t *)res_msg, strlen(res_msg), NULL);
 

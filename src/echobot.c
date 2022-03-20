@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <inttypes.h>
 #include <pthread.h>
 #include <signal.h>
@@ -402,7 +403,9 @@ int main(int argc, char *argv[]) {
 	pthread_t tox_thread, toxav_thread;
 	pthread_sigmask(SIG_BLOCK, &sig_set, NULL);
 	pthread_create(&tox_thread, NULL, &run_tox, g_tox);
+	pthread_setname_np(tox_thread, "echobot:tox");
 	pthread_create(&toxav_thread, NULL, &run_toxav, g_toxAV);
+	pthread_setname_np(toxav_thread, "echobot:toxav");
 
 	int sig;
 	sigwait(&sig_set, &sig);

@@ -11,6 +11,8 @@
 #include <tox/toxav.h>
 #include <sodium.h>
 
+#include "tox_private.h"
+
 static uint64_t start_time;
 static bool signal_exit = false;
 
@@ -69,6 +71,104 @@ static bool save_profile(Tox *tox) {
 		fprintf(stderr, "Could not write profile to disk\n");
 		return false;
 	}
+}
+
+static bool save_metrics(Tox *tox) {
+	FILE *file = fopen("metrics.txt", "wb");
+	if (!file) {
+		fprintf(stderr, "Could not write metrics data to disk\n");
+		return false;
+	}
+
+	Tox_Netprof_Packet_Id udp_ids[] = {
+		TOX_NETPROF_PACKET_ID_ZERO,
+        TOX_NETPROF_PACKET_ID_ONE,
+        TOX_NETPROF_PACKET_ID_TWO,
+        TOX_NETPROF_PACKET_ID_FOUR,
+        TOX_NETPROF_PACKET_ID_COOKIE_REQUEST,
+        TOX_NETPROF_PACKET_ID_COOKIE_RESPONSE,
+        TOX_NETPROF_PACKET_ID_CRYPTO_HS,
+        TOX_NETPROF_PACKET_ID_CRYPTO_DATA,
+        TOX_NETPROF_PACKET_ID_CRYPTO,
+        TOX_NETPROF_PACKET_ID_LAN_DISCOVERY,
+        TOX_NETPROF_PACKET_ID_ONION_SEND_INITIAL,
+        TOX_NETPROF_PACKET_ID_ONION_SEND_1,
+        TOX_NETPROF_PACKET_ID_ONION_SEND_2,
+        TOX_NETPROF_PACKET_ID_ANNOUNCE_REQUEST,
+        TOX_NETPROF_PACKET_ID_ANNOUNCE_RESPONSE,
+        TOX_NETPROF_PACKET_ID_ONION_DATA_REQUEST,
+        TOX_NETPROF_PACKET_ID_ONION_DATA_RESPONSE,
+        TOX_NETPROF_PACKET_ID_ONION_RECV_3,
+        TOX_NETPROF_PACKET_ID_ONION_RECV_2,
+		TOX_NETPROF_PACKET_ID_ONION_RECV_1,
+		TOX_NETPROF_PACKET_ID_BOOTSTRAP_INFO
+	};
+	Tox_Netprof_Packet_Id tcp_ids[] = {
+		TOX_NETPROF_PACKET_ID_ZERO,
+		TOX_NETPROF_PACKET_ID_ONE,
+		TOX_NETPROF_PACKET_ID_TWO,
+		TOX_NETPROF_PACKET_ID_TCP_DISCONNECT,
+		TOX_NETPROF_PACKET_ID_FOUR,
+		TOX_NETPROF_PACKET_ID_TCP_PONG,
+		TOX_NETPROF_PACKET_ID_TCP_OOB_SEND,
+		TOX_NETPROF_PACKET_ID_TCP_OOB_RECV,
+		TOX_NETPROF_PACKET_ID_TCP_ONION_REQUEST,
+		TOX_NETPROF_PACKET_ID_TCP_ONION_RESPONSE,
+		TOX_NETPROF_PACKET_ID_TCP_DATA
+	};
+
+	fprintf(file, "# HELP tox_network_packets_total Total number of Tox packets per protocol, direction and packet ID.\n");
+	fprintf(file, "# TYPE tox_network_packets_total counter\n");
+	for (size_t i = 0; i < sizeof(udp_ids) / sizeof(Tox_Netprof_Packet_Id); i++) {
+		Tox_Netprof_Packet_Id id = udp_ids[i];
+		uint64_t tx = tox_netprof_get_packet_id_count(tox, TOX_NETPROF_PACKET_TYPE_UDP, id, TOX_NETPROF_DIRECTION_SENT);
+		fprintf(file, "tox_network_packets_total{dir=\"tx\",net=\"%s\",id=\"0x%x\"} %" PRIu64 "\n", "udp", id, tx);
+		uint64_t rx = tox_netprof_get_packet_id_count(tox, TOX_NETPROF_PACKET_TYPE_UDP, id, TOX_NETPROF_DIRECTION_RECV);
+		fprintf(file, "tox_network_packets_total{dir=\"rx\",net=\"%s\",id=\"0x%x\"} %" PRIu64 "\n", "udp", id, rx);
+	}
+
+	for (size_t i = 0; i < sizeof(tcp_ids) / sizeof(Tox_Netprof_Packet_Id); i++) {
+		Tox_Netprof_Packet_Id id = tcp_ids[i];
+		uint64_t tx = tox_netprof_get_packet_id_count(tox, TOX_NETPROF_PACKET_TYPE_TCP, id, TOX_NETPROF_DIRECTION_SENT);
+		fprintf(file, "tox_network_packets_total{dir=\"tx\",net=\"%s\",id=\"0x%x\"} %" PRIu64 "\n", "tcp", id, tx);
+		uint64_t rx = tox_netprof_get_packet_id_count(tox, TOX_NETPROF_PACKET_TYPE_TCP, id, TOX_NETPROF_DIRECTION_RECV);
+		fprintf(file, "tox_network_packets_total{dir=\"rx\",net=\"%s\",id=\"0x%x\"} %" PRIu64 "\n", "tcp", id, rx);
+	}
+
+	fprintf(file, "# HELP tox_network_bytes_total Total amount of Tox network traffic in bytes per protocol, direction and packet ID.\n");
+	fprintf(file, "# TYPE tox_network_bytes_total counter\n");
+	for (size_t i = 0; i < sizeof(udp_ids) / sizeof(Tox_Netprof_Packet_Id); i++) {
+		Tox_Netprof_Packet_Id id = udp_ids[i];
+		uint64_t tx = tox_netprof_get_packet_id_bytes(tox, TOX_NETPROF_PACKET_TYPE_UDP, id, TOX_NETPROF_DIRECTION_SENT);
+		fprintf(file, "tox_network_bytes_total{dir=\"tx\",net=\"%s\",id=\"0x%x\"} %" PRIu64 "\n", "udp", id, tx);
+		uint64_t rx = tox_netprof_get_packet_id_bytes(tox, TOX_NETPROF_PACKET_TYPE_UDP, id, TOX_NETPROF_DIRECTION_RECV);
+		fprintf(file, "tox_network_bytes_total{dir=\"rx\",net=\"%s\",id=\"0x%x\"} %" PRIu64 "\n", "udp", id, rx);
+	}
+
+	for (size_t i = 0; i < sizeof(tcp_ids) / sizeof(Tox_Netprof_Packet_Id); i++) {
+		Tox_Netprof_Packet_Id id = tcp_ids[i];
+		uint64_t tx = tox_netprof_get_packet_id_bytes(tox, TOX_NETPROF_PACKET_TYPE_TCP, id, TOX_NETPROF_DIRECTION_SENT);
+		fprintf(file, "tox_network_bytes_total{dir=\"tx\",net=\"%s\",id=\"0x%x\"} %" PRIu64 "\n", "tcp", id, tx);
+		uint64_t rx = tox_netprof_get_packet_id_bytes(tox, TOX_NETPROF_PACKET_TYPE_TCP, id, TOX_NETPROF_DIRECTION_RECV);
+		fprintf(file, "tox_network_bytes_total{dir=\"rx\",net=\"%s\",id=\"0x%x\"} %" PRIu64 "\n", "tcp", id, rx);
+	}
+
+	fclose(file);
+	return true;
+}
+
+static void *run_metrics(void *arg) {
+	Tox *tox = (Tox *)arg;
+	fprintf(stderr, "Starting metrics thread\n");
+
+	while (!signal_exit) {
+		save_metrics(tox);
+
+		nanosleep((const struct timespec[]){{1, 0}}, NULL);
+	}
+
+	fprintf(stderr, "Shut down metrics thread\n");
+	return NULL;
 }
 
 static void *run_toxav(void *arg) {
@@ -400,12 +500,14 @@ int main(int argc, char *argv[]) {
 	sigaddset(&sig_set, SIGTERM);
 	sigaddset(&sig_set, SIGINT);
 
-	pthread_t tox_thread, toxav_thread;
+	pthread_t tox_thread, toxav_thread, metrics_thread;
 	pthread_sigmask(SIG_BLOCK, &sig_set, NULL);
 	pthread_create(&tox_thread, NULL, &run_tox, g_tox);
 	pthread_setname_np(tox_thread, "echobot:tox");
 	pthread_create(&toxav_thread, NULL, &run_toxav, g_toxAV);
 	pthread_setname_np(toxav_thread, "echobot:toxav");
+	pthread_create(&metrics_thread, NULL, &run_metrics, g_tox);
+	pthread_setname_np(metrics_thread, "echobot:metrics");
 
 	int sig;
 	sigwait(&sig_set, &sig);
@@ -414,6 +516,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "Waiting for tox and toxav threads to finish\n");
 	pthread_join(tox_thread, NULL);
 	pthread_join(toxav_thread, NULL);
+	pthread_join(metrics_thread, NULL);
 
 	fprintf(stderr, "Saving profile to disk and killing tox/toxav\n");
 	save_profile(g_tox);

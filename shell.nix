@@ -1,4 +1,7 @@
-with import <nixpkgs> {};
+with import <nixpkgs> {
+  overlays = [ (import ./overlay) ];
+};
+
 mkShell {
   buildInputs = [
     gcc

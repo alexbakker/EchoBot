@@ -1,2 +1,4 @@
 bin/
 data
+metrics.txt
+src/tox_private.h

@@ -312,12 +312,36 @@ static void video_receive_frame(ToxAV *toxAV, uint32_t friend_number, uint16_t w
 	}
 }
 
+static const char *tox_log_level_name(Tox_Log_Level level)
+{
+    switch (level) {
+        case TOX_LOG_LEVEL_TRACE:
+            return "TRACE";
+        case TOX_LOG_LEVEL_DEBUG:
+            return "DEBUG";
+        case TOX_LOG_LEVEL_INFO:
+            return "INFO";
+        case TOX_LOG_LEVEL_WARNING:
+            return "WARNING";
+        case TOX_LOG_LEVEL_ERROR:
+            return "ERROR";
+    }
+
+    return "UNKNOWN";
+}
+
+static void tox_log(Tox *tox, Tox_Log_Level level, const char *file, uint32_t line, const char *func, const char *message, void *user_data) {
+	const char *level_name = tox_log_level_name(level);
+	fprintf(stderr, "[%s] [%s:%d] %s\n", level_name, file, line, message);
+}
+
 int main(int argc, char *argv[]) {
 	start_time = time(NULL);
 
 	TOX_ERR_NEW err = TOX_ERR_NEW_OK;
 	struct Tox_Options options;
 	tox_options_default(&options);
+	tox_options_set_log_callback(&options, tox_log);
 
 	if (file_exists(data_filename)) {
 		if (load_profile(&g_tox, &options)) {

@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -std=gnu99 -Wall -g
 FILES = src/*.c
 OUT_EXE = bin/echobot
-LIBS = -lpthread -lsodium -ltoxcore -lmsgpackc
+LIBS = -lpthread -lsodium -ltoxcore
 
 build:
 	mkdir -p bin

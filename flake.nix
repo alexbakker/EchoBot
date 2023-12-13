@@ -15,7 +15,10 @@
             hardeningDisable = [ "fortify" ];
             depsBuildBuild = [ pkg-config ];
             nativeBuildInputs = [ gcc gnumake pkg-config ];
-            buildInputs = [ libtoxcore msgpack libsodium ];
+            buildInputs = [
+              libtoxcore
+              libsodium
+            ];
           };
         }
       );
